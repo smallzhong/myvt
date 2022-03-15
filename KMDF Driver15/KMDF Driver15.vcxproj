@@ -50,6 +50,7 @@
     <ClInclude Include="Trace.h" />
     <ClInclude Include="vmx.h" />
     <ClInclude Include="VMXDefine.h" />
+    <ClInclude Include="vmxs.h" />
     <ClInclude Include="VMXTools.h" />
   </ItemGroup>
   <ItemGroup>
@@ -256,6 +257,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="vmxs.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

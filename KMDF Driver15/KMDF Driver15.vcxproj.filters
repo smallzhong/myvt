@@ -51,6 +51,9 @@
     <ClInclude Include="VMXTools.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="vmxs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Driver.c">
@@ -62,5 +65,10 @@
     <ClCompile Include="VMXTools.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="vmxs.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
   </ItemGroup>
 </Project>
