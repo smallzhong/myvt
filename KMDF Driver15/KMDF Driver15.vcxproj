@@ -40,6 +40,7 @@
   <ItemGroup>
     <ClCompile Include="Driver.c" />
     <ClCompile Include="vmx.c" />
+    <ClCompile Include="vmxHandler.c" />
     <ClCompile Include="VMXTools.c" />
   </ItemGroup>
   <ItemGroup>

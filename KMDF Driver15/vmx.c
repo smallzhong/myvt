@@ -1,7 +1,8 @@
-ï»¿#include "vmx.h"
+#include "vmx.h"
 #include <intrin.h>
 #include "VMXDefine.h"
 #include "vmxs.h"
+#include "VMXTools.h"
 
 VMXCPUPCB vmxCpuPcbs[128];
 
@@ -28,7 +29,7 @@ int VmxInitVmOn()
 
 	if (!pVcpu->VmxOnAddr)
 	{
-		//ç”³è¯·å†…å­˜å¤±è´¥
+		//ÉêÇëÄÚ´æÊ§°Ü
 		return -1;
 	}
 
@@ -36,7 +37,7 @@ int VmxInitVmOn()
 
 	pVcpu->VmxOnAddrPhys = MmGetPhysicalAddress(pVcpu->VmxOnAddr);
 
-	//å¡«å……ID
+	//Ìî³äID
 	ULONG64 vmxBasic = __readmsr(IA32_VMX_BASIC);
 
 	*(PULONG)pVcpu->VmxOnAddr = (ULONG)vmxBasic;
@@ -67,7 +68,7 @@ int VmxInitVmOn()
 
 	if (error)
 	{
-		//é‡Šæ”¾å†…å­˜ï¼Œé‡ç½®CR4
+		//ÊÍ·ÅÄÚ´æ£¬ÖØÖÃCR4
 		mcr4 &= ~vcr04;
 		__writecr4(mcr4);
 		MmFreeContiguousMemorySpecifyCache(pVcpu->VmxOnAddr, PAGE_SIZE, MmCached);
@@ -78,11 +79,11 @@ int VmxInitVmOn()
 	return error;
 }
 
-void fillGdtDataItem(int index,short selector)
+void FullGdtDataItem(int index,short selector)
 {
 	GdtTable gdtTable = {0};
 	AsmGetGdtTable(&gdtTable);
-
+	//00cf9300`0000ffff
 	selector &= 0xFFF8;
 
 	ULONG limit = __segmentlimit(selector);
@@ -93,8 +94,10 @@ void fillGdtDataItem(int index,short selector)
 	item += 1;
 	itemBase.LowPart |= (*item & 0xFF000000) | ((*item & 0xFF) << 16);
 
-	//å±žæ€§
+	//ÊôÐÔ
 	ULONG attr = (*item & 0x00F0FF00) >> 8;
+
+	
 
 	if (selector == 0)
 	{
@@ -105,17 +108,18 @@ void fillGdtDataItem(int index,short selector)
 	__vmx_vmwrite(GUEST_ES_LIMIT + index * 2, limit);
 	__vmx_vmwrite(GUEST_ES_AR_BYTES + index * 2, attr);
 	__vmx_vmwrite(GUEST_ES_SELECTOR + index * 2, selector);
+
 }
 
 void VmxInitGuest(ULONG64 GuestEip, ULONG64 GuestEsp)
 {
-	fillGdtDataItem(0, AsmReadES());
-	fillGdtDataItem(1, AsmReadCS());
-	fillGdtDataItem(2, AsmReadSS());
-	fillGdtDataItem(3, AsmReadDS());
-	fillGdtDataItem(4, AsmReadFS());
-	fillGdtDataItem(5, AsmReadGS());
-	fillGdtDataItem(6, AsmReadLDTR());
+	FullGdtDataItem(0, AsmReadES());
+	FullGdtDataItem(1, AsmReadCS());
+	FullGdtDataItem(2, AsmReadSS());
+	FullGdtDataItem(3, AsmReadDS());
+	FullGdtDataItem(4, AsmReadFS());
+	FullGdtDataItem(5, AsmReadGS());
+	FullGdtDataItem(6, AsmReadLDTR());
 
 	GdtTable gdtTable = { 0 };
 	AsmGetGdtTable(&gdtTable);
@@ -130,11 +134,11 @@ void VmxInitGuest(ULONG64 GuestEip, ULONG64 GuestEsp)
 	PULONG trItem = (PULONG)(gdtTable.Base + trSelector);
 
 	
-	//è¯»TR
+	//¶ÁTR
 	trBase.LowPart = ((trItem[0] >> 16) & 0xFFFF) | ((trItem[1] & 0xFF) << 16) | ((trItem[1] & 0xFF000000));
 	trBase.HighPart = trItem[2];
 
-	//å±žæ€§
+	//ÊôÐÔ
 	ULONG attr = (trItem[1] & 0x00F0FF00) >> 8;
 	__vmx_vmwrite(GUEST_TR_BASE, trBase.QuadPart);
 	__vmx_vmwrite(GUEST_TR_LIMIT, trlimit);
@@ -192,11 +196,11 @@ void VmxInitHost(ULONG64 HostEip)
 	PULONG trItem = (PULONG)(gdtTable.Base + trSelector);
 
 
-	//è¯»TR
+	//¶ÁTR
 	trBase.LowPart = ((trItem[0] >> 16) & 0xFFFF) | ((trItem[1] & 0xFF) << 16) | ((trItem[1] & 0xFF000000));
 	trBase.HighPart = trItem[2];
 
-	//å±žæ€§
+	//ÊôÐÔ
 	__vmx_vmwrite(HOST_TR_BASE, trBase.QuadPart);
 	__vmx_vmwrite(HOST_TR_SELECTOR, trSelector);
 
@@ -236,6 +240,57 @@ void VmxInitHost(ULONG64 HostEip)
 	__vmx_vmwrite(HOST_IDTR_BASE, idtTable.Base);
 }
 
+void VmxInitEntry()
+{
+	ULONG64 vmxBasic = __readmsr(IA32_VMX_BASIC);
+	ULONG64 mseregister = ( (vmxBasic >> 55) & 1 ) ? IA32_MSR_VMX_TRUE_ENTRY_CTLS  :IA32_VMX_ENTRY_CTLS;
+
+	ULONG64 value = VmxAdjustContorls(0x200,mseregister);
+	__vmx_vmwrite(VM_ENTRY_CONTROLS, value);
+	__vmx_vmwrite(VM_ENTRY_MSR_LOAD_COUNT, 0);
+	__vmx_vmwrite(VM_ENTRY_INTR_INFO_FIELD, 0);
+}
+
+void VmxInitExit()
+{
+	ULONG64 vmxBasic = __readmsr(IA32_VMX_BASIC);
+
+	ULONG64 mseregister = ((vmxBasic >> 55) & 1) ? IA32_MSR_VMX_TRUE_EXIT_CTLS : IA32_MSR_VMX_EXIT_CTLS;
+
+	ULONG64 value = VmxAdjustContorls(0x200 | 0x8000, mseregister);
+	__vmx_vmwrite(VM_EXIT_CONTROLS, value);
+	__vmx_vmwrite(VM_EXIT_MSR_LOAD_COUNT, 0);
+	__vmx_vmwrite(VM_EXIT_INTR_INFO, 0);
+}
+
+void VmxInitControls()
+{
+	ULONG64 vmxBasic = __readmsr(IA32_VMX_BASIC);
+
+	ULONG64 mseregister = ((vmxBasic >> 55) & 1) ? IA32_MSR_VMX_TRUE_PINBASED_CTLS : IA32_MSR_VMX_PINBASED_CTLS;
+
+	ULONG64 value = VmxAdjustContorls(0, mseregister);
+
+	__vmx_vmwrite(PIN_BASED_VM_EXEC_CONTROL, value);
+
+	
+
+	mseregister = ((vmxBasic >> 55) & 1) ? IA32_MSR_VMX_TRUE_PROCBASED_CTLS : IA32_MSR_VMX_PROCBASED_CTLS;
+
+	value = VmxAdjustContorls(0, mseregister);
+
+	__vmx_vmwrite(CPU_BASED_VM_EXEC_CONTROL, value);
+
+	/*
+	//À©Õ¹²¿·Ö
+	mseregister = IA32_MSR_VMX_PROCBASED_CTLS2;
+
+	value = VmxAdjustContorls(0, mseregister);
+
+	__vmx_vmwrite(SECONDARY_VM_EXEC_CONTROL, value);
+	*/
+}
+
 int VmxInitVmcs(ULONG64 GuestEip,ULONG64 GuestEsp, ULONG64 hostEip)
 {
 	PVMXCPUPCB pVcpu = VmxGetCurrentCPUPCB();
@@ -249,7 +304,7 @@ int VmxInitVmcs(ULONG64 GuestEip,ULONG64 GuestEsp, ULONG64 hostEip)
 
 	if (!pVcpu->VmxcsAddr)
 	{
-		//ç”³è¯·å†…å­˜å¤±è´¥
+		//ÉêÇëÄÚ´æÊ§°Ü
 		return -1;
 	}
 
@@ -262,7 +317,7 @@ int VmxInitVmcs(ULONG64 GuestEip,ULONG64 GuestEsp, ULONG64 hostEip)
 
 	if (!pVcpu->VmxHostStackTop)
 	{
-		//ç”³è¯·å†…å­˜å¤±è´¥
+		//ÉêÇëÄÚ´æÊ§°Ü
 		
 		return -1;
 	}
@@ -271,12 +326,12 @@ int VmxInitVmcs(ULONG64 GuestEip,ULONG64 GuestEsp, ULONG64 hostEip)
 
 	pVcpu->VmxHostStackBase = (ULONG64)pVcpu->VmxHostStackTop + PAGE_SIZE * 36 - 0x200;
 
-	//å¡«å……ID
+	//Ìî³äID
 	ULONG64 vmxBasic = __readmsr(IA32_VMX_BASIC);
 
 	*(PULONG)pVcpu->VmxcsAddr = (ULONG)vmxBasic;
 
-	//åŠ è½½VMCS
+	//¼ÓÔØVMCS
 	__vmx_vmclear(&pVcpu->VmxcsAddrPhys.QuadPart);
 
 	__vmx_vmptrld(&pVcpu->VmxcsAddrPhys.QuadPart);
@@ -284,6 +339,14 @@ int VmxInitVmcs(ULONG64 GuestEip,ULONG64 GuestEsp, ULONG64 hostEip)
 	VmxInitGuest(GuestEip, GuestEsp);
 
 	VmxInitHost(hostEip);
+
+	VmxInitEntry();
+
+	VmxInitExit();
+
+	VmxInitControls();
+
+	return 0;
 }
 
 void VmxDestory()
@@ -314,6 +377,10 @@ void VmxDestory()
 	}
 
 	pVcpu->VmxHostStackTop = NULL;
+
+	ULONG64 mcr4 = __readcr4();
+	mcr4 &= ~0x2000;
+	__writecr4(mcr4);
 }
 
 int VmxInit(ULONG64 hostEip)
@@ -331,7 +398,7 @@ int VmxInit(ULONG64 hostEip)
 
 	if (error)
 	{
-		DbgPrintEx(77, 0, "[db]:vmon åˆå§‹åŒ–å¤±è´¥ error = %d,cpunumber %d\r\n", error, pVcpu->cpuNumber);
+		DbgPrintEx(77, 0, "[db]:vmon ³õÊ¼»¯Ê§°Ü error = %d,cpunumber %d\r\n", error, pVcpu->cpuNumber);
 
 		return error;
 	}
@@ -340,12 +407,21 @@ int VmxInit(ULONG64 hostEip)
 
 	if (error)
 	{
-		DbgPrintEx(77, 0, "[db]:vmcs åˆå§‹åŒ–å¤±è´¥ error = %d,cpunumber %d\r\n", error, pVcpu->cpuNumber);
+		DbgPrintEx(77, 0, "[db]:vmcs ³õÊ¼»¯Ê§°Ü error = %d,cpunumber %d\r\n", error, pVcpu->cpuNumber);
 
 		
 		VmxDestory();
 		return error;
 	}
 
+	//¿ªÆôVT
+	error = __vmx_vmlaunch();
+
+	if (error)
+	{
+		DbgPrintEx(77, 0, "[db]:__vmx_vmlaunchÊ§°Ü error = %d,cpunumber %d\r\n", error, pVcpu->cpuNumber);
+		VmxDestory();
+	}
 	return 0;
 }
+

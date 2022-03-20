@@ -65,6 +65,9 @@
     <ClCompile Include="VMXTools.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="vmxHandler.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="vmxs.asm">

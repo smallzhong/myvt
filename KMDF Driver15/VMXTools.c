@@ -28,3 +28,13 @@ BOOLEAN VmxIsCheckSupportVTCr4()
 	//检测CR4 VT是否开启，cr4.vmxe如果第14位为1，那么VT已经被开启，否则可以开启
 	return ((mcr4 >> 13) & 1) == 0;
 }
+
+
+ULONG64 VmxAdjustContorls(ULONG64 value, ULONG64 msr)
+{
+	LARGE_INTEGER msrValue;
+	msrValue.QuadPart = __readmsr(msr);
+	value = (msrValue.LowPart | value ) & msrValue.HighPart;
+
+	return value;
+}

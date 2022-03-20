@@ -28,7 +28,7 @@ PVMXCPUPCB VmxGetCPUPCB(ULONG cpuNumber);
 PVMXCPUPCB VmxGetCurrentCPUPCB();
 
 
-void fillGdtDataItem(int index, short selector);
+void FullGdtDataItem(int index, short selector);
 
 int VmxInit(ULONG64 hostEip);
 

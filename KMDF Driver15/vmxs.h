@@ -10,3 +10,5 @@ EXTERN_C USHORT AsmReadFS();
 EXTERN_C USHORT AsmReadGS();
 EXTERN_C USHORT AsmReadTR();
 EXTERN_C USHORT AsmReadLDTR();
+
+EXTERN_C void AsmVmxExitHandler();
