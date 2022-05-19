@@ -100,4 +100,54 @@ AsmVmxExitHandler proc
 	vmresume
 	ret
 AsmVmxExitHandler endp
+
+
+AsmInvd proc
+	invd;
+	ret
+AsmInvd endp;
+
+AsmVmCall proc
+	mov rax,rcx; //标志
+	mov rcx,rdx;
+	mov rdx,r8;
+	mov r8,r9;
+	mov r9,[rsp + 028h];
+	;lea rcx,[__RETVALUE];  //返回地址
+	;mov rdx,rsp;   //要返回的EIP
+	vmcall
+;__RETVALUE:
+	ret;
+AsmVmCall endp;
+
+AsmJmpRet proc
+	mov rsp,rdx;
+	jmp rcx;
+	ret;
+AsmJmpRet endp;
+
+
+AsmInvvpid PROC
+
+    invvpid rcx, oword ptr [rdx]
+    jz      ErrorWithStatus
+    jc      ErrorCodeFailed
+    xor     rax, rax
+    ret
+    
+ErrorWithStatus:
+    mov     rax, 1
+    ret
+
+ErrorCodeFailed:
+    mov     rax, 2
+    ret
+    
+AsmInvvpid ENDP
+
+
+Asminvept proc
+	invept rcx, OWORD PTR [rdx]
+	ret;
+Asminvept endp
 end

@@ -177,6 +177,7 @@ void VmxInitGuest(ULONG64 GuestEip, ULONG64 GuestEsp)
 	__vmx_vmwrite(GUEST_IDTR_LIMIT, idtTable.limit);
 	__vmx_vmwrite(GUEST_IDTR_BASE, idtTable.Base);
 
+	
 }
 
 
@@ -224,7 +225,7 @@ void VmxInitHost(ULONG64 HostEip)
 	__vmx_vmwrite(HOST_IA32_EFER, __readmsr(IA32_MSR_EFER));
 
 	__vmx_vmwrite(HOST_FS_BASE, __readmsr(IA32_FS_BASE));
-	__vmx_vmwrite(HOST_GS_BASE, __readmsr(IA32_GS_KERNEL_BASE));
+	__vmx_vmwrite(HOST_GS_BASE, __readmsr(IA32_GS_BASE));
 
 	__vmx_vmwrite(HOST_IA32_SYSENTER_CS, __readmsr(0x174));
 	__vmx_vmwrite(HOST_IA32_SYSENTER_ESP, __readmsr(0x175));
@@ -265,6 +266,8 @@ void VmxInitExit()
 
 void VmxInitControls()
 {
+	PVMXCPUPCB pVcpu = VmxGetCurrentCPUPCB();
+
 	ULONG64 vmxBasic = __readmsr(IA32_VMX_BASIC);
 
 	ULONG64 mseregister = ((vmxBasic >> 55) & 1) ? IA32_MSR_VMX_TRUE_PINBASED_CTLS : IA32_MSR_VMX_PINBASED_CTLS;
@@ -277,18 +280,66 @@ void VmxInitControls()
 
 	mseregister = ((vmxBasic >> 55) & 1) ? IA32_MSR_VMX_TRUE_PROCBASED_CTLS : IA32_MSR_VMX_PROCBASED_CTLS;
 
-	value = VmxAdjustContorls(0, mseregister);
+	ULONG64 CpuValue = CPU_BASED_ACTIVATE_MSR_BITMAP | CPU_BASED_ACTIVATE_SECONDARY_CONTROLS;
+
+	//CpuValue |= CPU_BASED_CR3_LOAD_EXITING | CPU_BASED_CR3_STORE_EXITING;
+
+	value = VmxAdjustContorls(CpuValue, mseregister);
 
 	__vmx_vmwrite(CPU_BASED_VM_EXEC_CONTROL, value);
 
-	/*
+	PHYSICAL_ADDRESS HPhy = {0};
+	HPhy.QuadPart = -1;
+	pVcpu->MsrBitMap = MmAllocateContiguousMemory(PAGE_SIZE, HPhy);
+
+	memset(pVcpu->MsrBitMap, 0, PAGE_SIZE);
+
+	pVcpu->MsrBitMapAddr = MmGetPhysicalAddress(pVcpu->MsrBitMap);
+
+	__vmx_vmwrite(MSR_BITMAP, pVcpu->MsrBitMapAddr.QuadPart);
+
+	VmxSetReadMsrBitMap(pVcpu->MsrBitMap, 0xc0000082, TRUE);
+	VmxSetWriteMsrBitMap(pVcpu->MsrBitMap, 0xc0000082, TRUE);
+
+
+
+	__vmx_vmwrite(CR3_TARGET_COUNT, 0);
+	__vmx_vmwrite(CR3_TARGET_VALUE0, 0);
+	__vmx_vmwrite(CR3_TARGET_VALUE1, 0);
+	__vmx_vmwrite(CR3_TARGET_VALUE2, 0);
+	__vmx_vmwrite(CR3_TARGET_VALUE3, 0);
+
 	//扩展部分
 	mseregister = IA32_MSR_VMX_PROCBASED_CTLS2;
 
-	value = VmxAdjustContorls(0, mseregister);
+	ULONG64 secValue = SECONDARY_EXEC_ENABLE_RDTSCP | SECONDARY_EXEC_ENABLE_INVPCID | SECONDARY_EXEC_XSAVES;
+
+	if (VmxInitEpt())
+	{
+		secValue |= SECONDARY_EXEC_ENABLE_EPT | SECONDARY_EXEC_ENABLE_VPID;
+	
+		ULONG number = KeGetCurrentProcessorNumberEx(NULL);
+		
+		//增加VPID 优化效率
+		__vmx_vmwrite(VIRTUAL_PROCESSOR_ID, number + 1);
+	
+		//写入EPT 地址
+		__vmx_vmwrite(EPT_POINTER, pVcpu->vmxEptp.Flags);
+	
+		
+	}
+
+	value = VmxAdjustContorls(secValue, mseregister);
 
 	__vmx_vmwrite(SECONDARY_VM_EXEC_CONTROL, value);
-	*/
+
+
+	//设置异常拦截
+
+	//ULONG64 exceptBitMap =  1 << 3;
+	//
+	//__vmx_vmwrite(EXCEPTION_BITMAP, exceptBitMap);
+
 }
 
 int VmxInitVmcs(ULONG64 GuestEip,ULONG64 GuestEsp, ULONG64 hostEip)
@@ -351,6 +402,8 @@ int VmxInitVmcs(ULONG64 GuestEip,ULONG64 GuestEsp, ULONG64 hostEip)
 
 void VmxDestory()
 {
+	
+
 	PVMXCPUPCB pVcpu = VmxGetCurrentCPUPCB();
 
 	if (pVcpu->VmxOnAddr && MmIsAddressValid(pVcpu->VmxOnAddr))
@@ -378,6 +431,16 @@ void VmxDestory()
 
 	pVcpu->VmxHostStackTop = NULL;
 
+	if (pVcpu->MsrBitMap && MmIsAddressValid(pVcpu->MsrBitMap))
+	{
+		MmFreeContiguousMemory(pVcpu->MsrBitMap);
+
+	}
+
+
+	
+	pVcpu->MsrBitMap = NULL;
+	
 	ULONG64 mcr4 = __readcr4();
 	mcr4 &= ~0x2000;
 	__writecr4(mcr4);
@@ -409,7 +472,7 @@ int VmxInit(ULONG64 hostEip)
 	{
 		DbgPrintEx(77, 0, "[db]:vmcs 初始化失败 error = %d,cpunumber %d\r\n", error, pVcpu->cpuNumber);
 
-		
+		__vmx_off();
 		VmxDestory();
 		return error;
 	}
@@ -420,6 +483,7 @@ int VmxInit(ULONG64 hostEip)
 	if (error)
 	{
 		DbgPrintEx(77, 0, "[db]:__vmx_vmlaunch失败 error = %d,cpunumber %d\r\n", error, pVcpu->cpuNumber);
+		__vmx_off();
 		VmxDestory();
 	}
 	return 0;

@@ -1,5 +1,6 @@
 #pragma once
 #include <ntifs.h>
+#include "VmxEpt.h"
 
 typedef struct _VMXCPUPCB 
 {
@@ -12,6 +13,12 @@ typedef struct _VMXCPUPCB
 
 	PVOID VmxHostStackTop;  //栈顶 小
 	PVOID VmxHostStackBase; //栈低 大
+
+	PVOID MsrBitMap;  //
+	PHYSICAL_ADDRESS MsrBitMapAddr; 
+
+	PVMX_MAMAGER_PAGE_ENTRY vmxMamgerPage;
+	VMX_EPTP vmxEptp;  //相当于CR3
 
 }VMXCPUPCB,*PVMXCPUPCB;
 
@@ -32,3 +39,4 @@ void FullGdtDataItem(int index, short selector);
 
 int VmxInit(ULONG64 hostEip);
 
+void VmxDestory();

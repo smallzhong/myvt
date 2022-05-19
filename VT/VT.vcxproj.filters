@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Driver Files">
+      <UniqueIdentifier>{8E41214B-6785-4CFE-B992-037D68949A14}</UniqueIdentifier>
+      <Extensions>inf;inv;inx;mof;mc;</Extensions>
+    </Filter>
+    <Filter Include="ssdt">
+      <UniqueIdentifier>{9880f341-cec3-481e-9cfa-7e0fc702af40}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="DriverMain.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="VMXTools.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vmx.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="vmxHandler.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ssdt\ssdt.c">
+      <Filter>ssdt</Filter>
+    </ClCompile>
+    <ClCompile Include="ssdt\AsmCode.c">
+      <Filter>ssdt</Filter>
+    </ClCompile>
+    <ClCompile Include="ssdt\SearchCode.c">
+      <Filter>ssdt</Filter>
+    </ClCompile>
+    <ClCompile Include="VmxSsdtHook.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="VmxEpt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PageHook.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="VMXTools.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VMXDefine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vmx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vmxs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vmxHandler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ssdt\SearchCode.h">
+      <Filter>ssdt</Filter>
+    </ClInclude>
+    <ClInclude Include="ssdt\ssdt.h">
+      <Filter>ssdt</Filter>
+    </ClInclude>
+    <ClInclude Include="ssdt\AsmCode.h">
+      <Filter>ssdt</Filter>
+    </ClInclude>
+    <ClInclude Include="VmxSsdtHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vmxSsdt.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VmxEpt.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PageHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ExportApi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="vmxs.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
+    <MASM Include="vmxssdt.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
+  </ItemGroup>
+</Project>
